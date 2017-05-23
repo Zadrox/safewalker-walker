@@ -17,14 +17,8 @@ import gql from 'graphql-tag';
 import _ from 'lodash';
 
 class Request extends Component {
-  constructor(props) {
-    super(props);
-
-    // handles to subscriptions go here.
-  }
-
   componentWillReceiveProps(nextProps) {
-    console.log(nextProps.localRequests);
+    console.log("nextProps: ", nextProps);
   }
 
   _renderIcon = () => {
@@ -34,29 +28,50 @@ class Request extends Component {
       dispatched,
       arrived,
       pickedUp,
+      currentState,
+      requestState
     } = this.props;
 
-    if (!online) {
-      return (
-        <View style={styles.thumbnailBorder}>
-          <Thumbnail size={56} source={{uri: 'https://avatars3.githubusercontent.com/u/7960861?v=3&s=460'}}/>
-        </View>
-      );
-    } else if (!requestId) {
-      return (
-        <View/>
-      );
-    } else if ((requestId || dispatched || arrived) && !pickedUp) {
-      return (
-        <View style={styles.thumbnailBorder}>
-          <Thumbnail size={56} source={{uri: 'https://avatars0.githubusercontent.com/u/15644165?v=3&s=460'}}/>
-        </View>
-      );
-    } else if (pickedUp) {
-      return (
-        <View/>
-      );
+    switch (currentState) {
+      case "LOADING":
+      case "AVAILABLE":
+        return (<View/>);
+      case "UNAVAILABLE":
+        return (
+          <View style={styles.thumbnailBorder}>
+            <Thumbnail size={56} source={{uri: 'https://avatars3.githubusercontent.com/u/7960861?v=3&s=460'}}/>
+          </View>
+        );
+      case "PENDINGASSIGNED":
+        return (
+          <View style={styles.thumbnailBorder}>
+            <Thumbnail size={56} source={{uri: 'https://avatars0.githubusercontent.com/u/15644165?v=3&s=460'}}/>
+          </View>
+        );
+      case "ASSIGNED":
+        switch (requestState){
+          case "LOADING":
+          case "UNASSIGNED":
+          case "ASSIGNED":
+          case "ARRIVED":
+            return (
+              <View style={styles.thumbnailBorder}>
+                <Thumbnail size={56} source={{uri: 'https://avatars0.githubusercontent.com/u/15644165?v=3&s=460'}}/>
+              </View>
+            );
+          case "INPROGRESS":
+          case "COMPLETED":
+            return (
+              <View/>
+            );
+        }
     }
+
+    // } else if (pickedUp) {
+    //   return (
+    //     <View/>
+    //   );
+    // }
   }
 
   _renderContent = () => {
@@ -66,71 +81,160 @@ class Request extends Component {
       dispatched,
       arrived,
       pickedUp,
+      currentState,
+      requestState,
     } = this.props;
 
-    if (!online) {
-      return (
-        <View style={styles.content}>
-          <Text style={{textAlign: 'center'}}>Hi there, Nicholas L.</Text>
-        </View>
-      );
-    } else if (!requestId) {
-      return (
-        <View style={styles.content}>
-          <Text style={{textAlign: 'center'}}>Waiting for Dispatch</Text>
-          <ActivityIndicator
-            style={{marginTop: 12}}
-            size="large"
-            color="#4CAF50"
-            animating/>
-        </View>
-      );
-    } else if (requestId && !dispatched) {
-      return (
-        <View style={styles.content}>
-          <Text style={{textAlign: 'center'}}>New Request from Christopher R.</Text>
-        </View>
-      );
-    } else if (dispatched && !arrived) {
-      return (
-        <View style={styles.content}>
-          <Text style={{textAlign: 'center'}}>On way to Christopher R.</Text>
-        </View>
-      );
-    } else if (arrived && !pickedUp) {
-      return (
-        <View style={styles.content}>
-          <Text style={{textAlign: 'center'}}>Confirm Pickup</Text>
-        </View>
-      );
-    } else if (pickedUp) {
-      return (
-        <View style={styles.content}>
-          <Text style={{textAlign: 'center'}}>In Progress</Text>
-          <ActivityIndicator
-            style={{marginTop: 12}}
-            size="large"
-            color="#4CAF50"
-            animating/>
-        </View>
-      );
+    switch (currentState) {
+      case "LOADING":
+        return (<View/>);
+      case "UNAVAILABLE":
+        return (
+          <View style={styles.content}>
+            <Text style={{textAlign: 'center'}}>Hi there, Nicholas L.</Text>
+          </View>
+        );
+      case "AVAILABLE":
+        return (
+          <View style={styles.content}>
+            <Text style={{textAlign: 'center'}}>Waiting for Dispatch</Text>
+            <ActivityIndicator
+              style={{marginTop: 12}}
+              size="large"
+              color="#4CAF50"
+              animating/>
+          </View>
+        );
+      case "PENDINGASSIGNED":
+        return (
+          <View style={styles.content}>
+            <Text style={{textAlign: 'center'}}>New Request from Christopher R.</Text>
+          </View>
+        );
+      case "ASSIGNED":
+        switch (requestState) {
+          case "UNASSIGNED":
+          case "ASSIGNED":
+            return (
+              <View style={styles.content}>
+                <Text style={{textAlign: 'center'}}>On way to Christopher R.</Text>
+              </View>
+            );
+          case "ARRIVED":
+            return (
+              <View style={styles.content}>
+                <Text style={{textAlign: 'center'}}>Confirm Pickup</Text>
+              </View>
+            );
+          case "INPROGRESS":
+            return (
+              <View style={styles.content}>
+                <Text style={{textAlign: 'center'}}>In Progress</Text>
+                <ActivityIndicator
+                  style={{marginTop: 12}}
+                  size="large"
+                  color="#4CAF50"
+                  animating/>
+              </View>
+            );
+        }
+
     }
+    return (<View/>);
+    // } else if (arrived && !pickedUp) {
+    //   return (
+    //     <View style={styles.content}>
+    //       <Text style={{textAlign: 'center'}}>Confirm Pickup</Text>
+    //     </View>
+    //   );
+    // } else if (pickedUp) {
+    //   return (
+    //     <View style={styles.content}>
+    //       <Text style={{textAlign: 'center'}}>In Progress</Text>
+    //       <ActivityIndicator
+    //         style={{marginTop: 12}}
+    //         size="large"
+    //         color="#4CAF50"
+    //         animating/>
+    //     </View>
+    //   );
+    // }
   }
 
   _setUserActive = () => {
-    submitUserUpdate({id: 'VXNlcjoy', currentState: 'AVAILABLE'})
-    .then(() => this.props.toggleOnline());
+    // if (!this.assignedSubscription)
+    //   this.assignedSubscription = this.props.subscribeToAssigned({id: this.props.user.id});
+    this.props.submitUserUpdate({id: 'VXNlcjoy', currentState: 'AVAILABLE'})
+    // .then(() => this.props.toggleOnline());
   }
 
   _setUserInactive = () => {
-    submitUserUpdate({id: 'VXNlcjoy', currentState: 'UNAVAILABLE'})
-    .then(() => this.props.toggleOnline());
+    // this.assignedSubscription && this.assignedSubscription();
+    // this.assignedSubscription = null;
+    this.props.submitUserUpdate({id: 'VXNlcjoy', currentState: 'UNAVAILABLE'})
+    // .then(() => this.props.toggleOnline());
+  }
+
+  _acceptPendingAssignment = () => {
+    console.log(this.props.user);
+
+    const { id } = this.props.user.pendingAssignments.edges[0].node;
+
+    this.props.submitPendingAssignmentUpdate({ id, status: "ACCEPTED"})
+    .then(({data}) => {
+      console.log(data);
+      this.props.setRequestId(data.updatePendingAssignment.changedPendingAssignment.request.id)
+    });
+  }
+
+  _rejectPendingAssignment = () => {
+    const { id } = this.props.user.pendingAssignments.edges[0].node;
+
+    this.props.submitPendingAssignmentUpdate({ id, status: "REJECTED"});
+  }
+
+  _confirmArrival = () => {
+    const { id } = this.props.request;
+
+    this.props.updateRequest({ id , status: "ARRIVED"});
+  }
+
+  _cancelRequest = () => {
+    const { id } = this.props.request;
+
+    this.props.updateRequest({ id , status: "CANCELLED"})
+    .then(() => this.props.setRequestId(null));
+  }
+
+  _confirmPickup = () => {
+    const { id } = this.props.request;
+
+    this.props.updateRequest({ id , status: "INPROGRESS"});
+  }
+
+  _confirmDropoff = () => {
+    const { id } = this.props.request;
+
+    this.props.updateRequest({ id , status: "COMPLETED"})
+    .then(() => this.props.setRequestId(null));
+  }
+
+  componentWillUnmount() {
+    // this.assignedSubscription && this.assignedSubscription();
+    // this.assignedSubscription = null;
+  }
+
+  _setRequestId = () => {
+    this.props.submitPendingAssignmentUpdate({})
+    .then(result => console.log(result));
+    // sets the request id when walker accepts pendingAssignment
   }
 
   _renderButton = () => {
     const {
       online,
       requestId,
+      request,
       toggleOnline,
       acceptDispatch,
       dispatched,
@@ -140,82 +244,147 @@ class Request extends Component {
       pickedUp,
       confirmComplete,
       submitUserUpdate,
+      currentState,
+      requestState,
     } = this.props;
 
-    if (!online) {
-      return (
-        <Button
-          block
-          success
-          onPress={toggleOnline}
-          style={styles.button}>
-          <Text>{"Go Online"}</Text>
-        </Button>
-      );
-    } else if (!requestId) {
-      return (
-        <Button
-          block
-          danger
-          onPress={toggleOnline}
-          style={styles.button}>
-          <Text>{"Go Offline"}</Text>
-        </Button>
-      );
-    } else if (requestId && !dispatched) {
-      return (
-        <Button
-          block
-          info
-          onPress={acceptDispatch}
-          style={styles.button}>
-          <Text>{"Acknowledge"}</Text>
-        </Button>
-      );
-    } else if (dispatched && !arrived) {
-      return (<View/>);
-    } else if (arrived && !pickedUp) {
-      return (
-        <View style={{flexDirection: 'row'}}>
+    console.log(requestState);
+
+    switch (currentState) {
+      case "LOADING":
+        return (
+          <View/>
+        );
+      case "UNAVAILABLE":
+        return (
           <Button
-            danger
             block
-            onPress={cancelDispatch}
-            style={{margin: 16, flex: 1}}>
-            <Text>{"Cancel"}</Text>
-          </Button>
-          <Button
             success
-            block
-            onPress={confirmPickup}
-            style={{margin: 16, flex: 1}}>
-            <Text>{"Met Requestor"}</Text>
+            onPress={this._setUserActive}
+            style={styles.button}>
+            <Text>{"Go Online"}</Text>
           </Button>
-        </View>
-      );
-    } else if (pickedUp) {
-      return (
-        <Button
-          block
-          success
-          onPress={confirmComplete}
-          style={styles.button}>
-          <Text>{"Complete"}</Text>
-        </Button>
-      );
+        );
+      case "AVAILABLE":
+        return (
+          <Button
+            block
+            danger
+            onPress={this._setUserInactive}
+            style={styles.button}>
+            <Text>{"Go Offline"}</Text>
+          </Button>
+        );
+      case "PENDINGASSIGNED":
+        return (
+          <View style={{flexDirection: 'row'}}>
+            <Button
+              danger
+              block
+              onPress={this._rejectPendingAssignment}
+              style={{margin: 16, flex: 1}}>
+              <Text>{"Reject"}</Text>
+            </Button>
+            <Button
+              success
+              block
+              onPress={this._acceptPendingAssignment}
+              style={{margin: 16, flex: 1}}>
+              <Text>{"Accept"}</Text>
+            </Button>
+          </View>
+        );
+      case "ASSIGNED":
+        switch (requestState) {
+          case "UNASSIGNED":
+          case "ASSIGNED":
+            return (
+              <Button
+                block
+                info
+                onPress={this._confirmArrival}
+                style={styles.button}>
+                <Text>{"Confirm Arrival"}</Text>
+              </Button>
+            );
+          case "ARRIVED":
+            return (
+              <View style={{flexDirection: 'row'}}>
+                <Button
+                  danger
+                  block
+                  onPress={this._cancelRequest}
+                  style={{margin: 16, flex: 1}}>
+                  <Text>{"Cancel"}</Text>
+                </Button>
+                <Button
+                  success
+                  block
+                  onPress={this._confirmPickup}
+                  style={{margin: 16, flex: 1}}>
+                  <Text>{"Confirm Pickup"}</Text>
+                </Button>
+              </View>
+            );
+          case "INPROGRESS":
+            return (
+              <Button
+                block
+                success
+                onPress={this._confirmDropoff}
+                style={styles.button}>
+                <Text>{"Confirm Dropoff"}</Text>
+              </Button>
+            );
+        }
     }
+
+    return (<View/>);
+    // } else if (dispatched && !arrived) {
+    //   return (<View/>);
+    // } else if (arrived && !pickedUp) {
+    //   return (
+    //     <View style={{flexDirection: 'row'}}>
+    //       <Button
+    //         danger
+    //         block
+    //         onPress={cancelDispatch}
+    //         style={{margin: 16, flex: 1}}>
+    //         <Text>{"Cancel"}</Text>
+    //       </Button>
+    //       <Button
+    //         success
+    //         block
+    //         onPress={confirmPickup}
+    //         style={{margin: 16, flex: 1}}>
+    //         <Text>{"Met Requestor"}</Text>
+    //       </Button>
+    //     </View>
+    //   );
+    // } else if (pickedUp) {
+    //   return (
+    //     <Button
+    //       block
+    //       success
+    //       onPress={confirmComplete}
+    //       style={styles.button}>
+    //       <Text>{"Complete"}</Text>
+    //     </Button>
+    //   );
+    // }
   }
 
   render() {
     const {
       width: windowWidth,
       height: windowHeight,
+      currentState
     } = this.props;
 
     const containerHeader = 175;
 
     const style = {
-      top: windowHeight - containerHeader - 30,
+      top: currentState == "LOADING" ? windowHeight : windowHeight - containerHeader - 30,
       height: containerHeader + 30,
       paddingTop: 30
     }
@@ -284,6 +453,186 @@ const styles = {
   }
 };
 
+const ASSIGNED_SUBSCRIPTION = gql`
+  subscription($id: ID) {
+    subscribeToPendingAssignment(filter: {
+      safewalkerId: { eq: $id },
+      status: { eq: PENDING }
+    },
+    mutations: [createPendingAssignment]) {
+      value {
+        id
+        status
+        safewalker {
+          id
+          currentState
+        }
+        request {
+          id
+          source {
+            latitude
+            longitude
+            name
+          }
+          destination {
+            latitude
+            longitude
+            name
+          }
+          requestor {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+`;
+
+const USER_QUERY = gql`
+  query($id: ID!) {
+    getUser(id: $id) {
+      id
+      name
+      currentState
+      pendingAssignments(where: {
+        status: { eq: PENDING }
+      }) {
+        edges {
+          node {
+            id
+            status
+            request {
+              id
+              status
+              source {
+                latitude
+                longitude
+                name
+              }
+              destination {
+                latitude
+                longitude
+                name
+              }
+              requestor {
+                id
+                name
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+const withUserData = graphql(
+  USER_QUERY,
+  {
+    name: "user",
+    options: {
+      variables: {
+        id: "VXNlcjoy"
+      }
+    },
+    props: ({ownProps, user}) => {
+      const mappedState = {};
+
+      if (!user.loading && !user.error) {
+        const { getUser: userData } = user;
+
+        mappedState.user = userData;
+        mappedState.currentState = userData.currentState;
+      } else {
+        mappedState.currentState = "LOADING";
+      }
+
+      return {
+        ...mappedState
+      }
+    }
+  }
+);
+
+const REQUEST_QUERY = gql`
+  query requestQuery($id: ID!) {
+    getRequest(id: $id) {
+      id
+      status
+      source {
+        latitude
+        longitude
+        name
+      }
+      destination {
+        latitude
+        longitude
+        name
+      }
+      requestor {
+        id
+        name
+      }
+    }
+  }
+`;
+
+const REQUEST_SUBSCRIPTION = gql`
+  subscription onRequestChanged($filter: RequestSubscriptionFilter, $mutations: [RequestMutationEvent]!) {
+    subscribeToRequest(filter: $filter, mutations: $mutations) {
+      value {
+        status
+        id
+      }
+    }
+  }
+`;
+
+const withRequestData = graphql(
+  REQUEST_QUERY,
+  {
+    name: 'request',
+    skip: ownProps => ownProps.requestId ? false : true,
+    options: ownProps => ({ variables: { id: ownProps.requestId }}),
+    props: ({ownProps, request}) => {
+      const mappedState = {};
+
+      console.log('YOU SHOULD BE EXECUTING...');
+
+      if (!request.loading && !request.error) {
+        const { getRequest: requestData } = request;
+
+        mappedState.request = requestData;
+        mappedState.requestState = requestData.status;
+      }
+
+      return {
+        ...mappedState,
+        subscribeToRequestUpdates: ({requestId}) => {
+          return request.subscribeToMore({
+            document: REQUEST_SUBSCRIPTION,
+            variables: {
+              filter: { id: { eq: requestId }},
+              mutations: ["updateRequest"]
+            },
+            updateQuery: (prev, {subscriptionData}) => {
+              if (!subscriptionData.data) {
+                return prev;
+              }
+
+              const nextState = Object.assign({}, prev);
+              nextState.getRequest.status = subscriptionData.data.subscribeToRequest.value.status;
+
+              return nextState;
+            }
+          })
+        }
+      }
+    }
+  }
+);
+
 const withUpdateWalkerMutation = graphql(
   gql`
     mutation($input: UpdateUserInput!) {
@@ -291,8 +640,6 @@ const withUpdateWalkerMutation = graphql(
         changedUser {
           id
           currentState
-          latitude
-          longitude
         }
       }
     }
@@ -309,116 +656,58 @@ const withUpdateWalkerMutation = graphql(
   }
 );
 
-const REQUEST_SUBSCRIPTION = gql`
-  subscription onNewRequest($filter: RequestSubscriptionFilter, $mutations: [RequestMutationEvent]!) {
-    subscribeToRequest(filter: $filter, mutations: $mutations) {
-      value {
-        id
-        requestor {
-          id
-          name
-        }
-        source {
-          name
-          latitude
-          longitude
-        }
-        destination {
-          name
-          latitude
-          longitude
-        }
-      }
-    }
-  }
-`;
-
-const withRequestsQuery = graphql(
+const withUpdatePendingAssignmentMutation = graphql(
   gql`
-    query getLocalRequests($where: RequestWhereArgs) {
-      viewer {
-        id
-        allRequests(where: $where) {
-          edges {
-            node {
-              id
-              requestor {
-                id
-                name
-              }
-              source {
-                name
-                latitude
-                longitude
-              }
-              destination {
-                name
-                latitude
-                longitude
-              }
-            }
+    mutation($input: UpdatePendingAssignmentInput!) {
+      updatePendingAssignment(input: $input) {
+        changedPendingAssignment {
+          id
+          status
+          request {
+            id
           }
         }
       }
     }
   `,
   {
-    name: 'localRequests',
-    skip: (ownProps) => ownProps.currentLocation ? false : true,
-    options: (ownProps) => {
-
-      const SEARCH_RADIUS = 0.05;
-      const { latitude, longitude } = ownProps.currentLocation;
-
-      const lowerLatBound = latitude - SEARCH_RADIUS;
-      const upperLatBound = latitude + SEARCH_RADIUS;
-
-      const latBetween = [lowerLatBound, upperLatBound];
-
-      const lowerLngBound = longitude - SEARCH_RADIUS;
-      const upperLngBound = longitude + SEARCH_RADIUS;
-
-      const lngBetween = [lowerLngBound, upperLngBound];
-
-      return {
-        variables: { where: {
-          status: {eq: "UNASSIGNED"},
-          srcLat: {between: latBetween},
-          srcLng: {between: lngBetween},
-        }}
+    name: 'updatePendingAssignment',
+    props: ({ownProps, updatePendingAssignment}) => ({
+      submitPendingAssignmentUpdate: ({ id, status }) => {
+        return updatePendingAssignment({
+          variables: { input: { id, status } }
+        });
       }
-    },
-    props: ({ownProps, localRequests}) => {
-      return {
-        localRequests,
-        subscribeToLocalRequests: ({currentLocation}) => {
-          return localRequests.subscribeToMore({
-            document: REQUEST_SUBSCRIPTION,
-            variables: {
-              filter: {
-                status: {eq: "UNASSIGNED"},
-                srcLat: {between: [53, 54]},
-                srcLng: {between: [-113, -114]}
-              },
-              mutations: ["createRequest"]
-            },
-            updateQuery: (prev, {subscriptionData}) => {
-              if (!subscriptionData.data) {
-                return prev;
-              }
+    }),
+  }
+);
 
-              console.log(subscriptionData);
-
-              return prev
-            }
-          })
+const withUpdateRequestMutation = graphql(
+  gql`
+    mutation($input: UpdateRequestInput!) {
+      updateRequest(input: $input) {
+        changedRequest {
+          id
+          status
         }
       }
     }
+  `,
+  {
+    props: ({ownProps, mutate}) => ({
+      updateRequest: ({ id, status }) => {
+        return mutate({
+          variables: { input: { id, status }}
+        });
+      }
+    }),
   }
 );
 
 export default compose(
   withUpdateWalkerMutation,
-  withRequestsQuery
+  withUpdatePendingAssignmentMutation,
+  withUpdateRequestMutation,
+  withUserData,
+  withRequestData,
 )(Request);
