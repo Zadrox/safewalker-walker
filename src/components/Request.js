@@ -241,18 +241,6 @@ class Request extends Component {
 
   _renderButton = () => {
     const {
-      online,
-      requestId,
-      request,
-      toggleOnline,
-      acceptDispatch,
-      dispatched,
-      arrived,
-      cancelDispatch,
-      confirmPickup,
-      pickedUp,
-      confirmComplete,
-      submitUserUpdate,
       currentState,
       requestState,
     } = this.props;
