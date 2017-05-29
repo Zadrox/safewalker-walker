@@ -42,7 +42,8 @@ class MapScreen extends Component {
   }
 
   setRequestId = (requestId) => {
-    this.setState({requestId});
+    if (requestId != this.state.requestId)
+      this.setState({requestId});
   }
 
   acceptDispatch = () => {
@@ -93,7 +94,8 @@ class MapScreen extends Component {
         <StatusBar
           translucent
           backgroundColor='rgba(100, 100, 100, 0.4)'/>
-        <Map/>
+        <Map
+          requestId={requestId}/>
         <Request
           online={online}
           requestId={requestId}
@@ -123,112 +125,5 @@ const styles = {
     backgroundColor: '#EEE',
   }
 };
-
-const ASSIGNED_SUBSCRIPTION = gql`
-  subscription($id: ID) {
-    subscribeToPendingAssignment(filter: {
-      safewalkerId: { eq: $id },
-      status: { eq: PENDING }
-    },
-    mutations: [createPendingAssignment]) {
-      value {
-        id
-        status
-        request {
-          id
-          source {
-            latitude
-            longitude
-            name
-          }
-          destination {
-            latitude
-            longitude
-            name
-          }
-          requestor {
-            id
-            name
-          }
-        }
-      }
-    }
-  }
-`
-
-const withUserData = graphql(
-  gql`
-    query($id: ID!) {
-      getUser(id: $id) {
-        id
-        name
-        currentState
-        pendingAssignments(where: {
-          status: { eq: PENDING }
-        }) {
-          edges {
-            node {
-              id
-              status
-              request {
-                id
-                status
-                source {
-                  latitude
-                  longitude
-                  name
-                }
-                destination {
-                  latitude
-                  longitude
-                  name
-                }
-                requestor {
-                  id
-                  name
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  `,
-  {
-    name: "user",
-    options: {
-      variables: {
-        id: "VXNlcjoy"
-      }
-    },
-    props: ({ownProps, user}) => {
-      return {
-        ...mappedState,
-        subscribeToAssigned: ({id}) => {
-          return user.subscribeToMore({
-            document: ASSIGNED_SUBSCRIPTION,
-            variables: {
-              id
-            },
-            updateQuery: (prev, {subscriptionData}) => {
-              if (!subscriptionData.data) {
-                return prev
-              }
-
-              console.log(subscriptionData.data);
-              console.log(prev);
-
-              return prev;
-            }
-          })
-        }
-      }
-    }
-  }
-);
-
-// export default compose(
-//   withUserData
-// )(MapScreen);
 
 export default MapScreen;

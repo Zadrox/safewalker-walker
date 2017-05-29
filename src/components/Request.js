@@ -17,20 +17,51 @@ import gql from 'graphql-tag';
 import _ from 'lodash';
 
 class Request extends Component {
+  constructor(props) {
+    super(props);
+
+    this.userSubscription = null;
+  }
+
   componentWillReceiveProps(nextProps) {
-    console.log("nextProps: ", nextProps);
+    console.log(nextProps);
+
+    if (nextProps.user && !nextProps.requestId && nextProps.user.assignments.edges.length > 0){
+      const { request } = nextProps.user.assignments.edges[0].node;
+
+      if (!_.includes(["CANCELLED", "COMPLETED"], request.status)) {
+        nextProps.setRequestId(request.id);
+      }
+    }
+
+    if (nextProps.currentState == "PENDINGASSIGNED") {
+      nextProps.setRequestId(nextProps.user.pendingAssignments.edges[0].node.request.id);
+    }
+
+    if (nextProps.currentState == "AVAILABLE" && this.props.currentState == "ASSIGNED") {
+      nextProps.setRequestId(null);
+    }
+
+    if (nextProps.currentState != "UNAVAILABLE" && nextProps.currentState != "LOADING") {
+      this._startUserSubscription(nextProps.user.id);
+    }
   }
 
   _renderIcon = () => {
     const {
-      online,
-      requestId,
-      dispatched,
-      arrived,
-      pickedUp,
       currentState,
-      requestState
+      requestState,
+      user,
+      request
     } = this.props;
+
+    let icon;
+
+    if (currentState == "PENDINGASSIGNED" && user.pendingAssignments.edges[0].node.request.requestor.name == "Tigger") {
+      icon = require('../../static/tigger.jpg');
+    } else {
+      icon = require('../../static/piglet.jpg');
+    }
 
     switch (currentState) {
       case "LOADING":
@@ -39,13 +70,13 @@ class Request extends Component {
       case "UNAVAILABLE":
         return (
           <View style={styles.thumbnailBorder}>
-            <Thumbnail size={56} source={{uri: 'https://avatars3.githubusercontent.com/u/7960861?v=3&s=460'}}/>
+            <Thumbnail size={56} source={require('../../static/pooh.jpg')}/>
           </View>
         );
       case "PENDINGASSIGNED":
         return (
           <View style={styles.thumbnailBorder}>
-            <Thumbnail size={56} source={{uri: 'https://avatars0.githubusercontent.com/u/15644165?v=3&s=460'}}/>
+            <Thumbnail size={56} source={icon}/>
           </View>
         );
       case "ASSIGNED":
@@ -56,7 +87,7 @@ class Request extends Component {
           case "ARRIVED":
             return (
               <View style={styles.thumbnailBorder}>
-                <Thumbnail size={56} source={{uri: 'https://avatars0.githubusercontent.com/u/15644165?v=3&s=460'}}/>
+                <Thumbnail size={56} source={require('../../static/piglet.jpg')}/>
               </View>
             );
           case "INPROGRESS":
@@ -66,21 +97,13 @@ class Request extends Component {
             );
         }
     }
-
-    // } else if (pickedUp) {
-    //   return (
-    //     <View/>
-    //   );
-    // }
+    return (<View/>);
   }
 
   _renderContent = () => {
     const {
-      online,
-      requestId,
-      dispatched,
-      arrived,
-      pickedUp,
+      user,
+      request,
       currentState,
       requestState,
     } = this.props;
@@ -91,13 +114,13 @@ class Request extends Component {
       case "UNAVAILABLE":
         return (
           <View style={styles.content}>
-            <Text style={{textAlign: 'center'}}>Hi there, Nicholas L.</Text>
+            <Text style={{textAlign: 'center'}}>Hi there, {user.name}</Text>
           </View>
         );
       case "AVAILABLE":
         return (
           <View style={styles.content}>
-            <Text style={{textAlign: 'center'}}>Waiting for Dispatch</Text>
+            <Text style={{textAlign: 'center'}}>Awaiting assignment</Text>
             <ActivityIndicator
               style={{marginTop: 12}}
               size="large"
@@ -108,7 +131,9 @@ class Request extends Component {
       case "PENDINGASSIGNED":
         return (
           <View style={styles.content}>
-            <Text style={{textAlign: 'center'}}>New Request from Christopher R.</Text>
+            <Text style={{textAlign: 'center'}}>
+              New Request from {user.pendingAssignments.edges[0].node.request.requestor.name}
+            </Text>
           </View>
         );
       case "ASSIGNED":
@@ -117,7 +142,9 @@ class Request extends Component {
           case "ASSIGNED":
             return (
               <View style={styles.content}>
-                <Text style={{textAlign: 'center'}}>On way to Christopher R.</Text>
+                <Text style={{textAlign: 'center'}}>
+                  On way to {request.requestor.name}
+                </Text>
               </View>
             );
           case "ARRIVED":
@@ -141,48 +168,36 @@ class Request extends Component {
 
     }
     return (<View/>);
-    // } else if (arrived && !pickedUp) {
-    //   return (
-    //     <View style={styles.content}>
-    //       <Text style={{textAlign: 'center'}}>Confirm Pickup</Text>
-    //     </View>
-    //   );
-    // } else if (pickedUp) {
-    //   return (
-    //     <View style={styles.content}>
-    //       <Text style={{textAlign: 'center'}}>In Progress</Text>
-    //       <ActivityIndicator
-    //         style={{marginTop: 12}}
-    //         size="large"
-    //         color="#4CAF50"
-    //         animating/>
-    //     </View>
-    //   );
-    // }
+  }
+
+  _teardownUserSubscription = () => {
+    console.log('tearingdown');
+    this.userSubscription && this.userSubscription();
+    this.userSubscription = null;
+  }
+
+  _startUserSubscription = (id) => {
+    if (this.props.user || id) {
+      console.log('startingup');
+      this.userSubscription = this.props.subscribeToUserUpdate({id: id ? id : this.props.user.id});
+    }
   }
 
   _setUserActive = () => {
-    // if (!this.assignedSubscription)
-    //   this.assignedSubscription = this.props.subscribeToAssigned({id: this.props.user.id});
+    this._startUserSubscription();
     this.props.submitUserUpdate({id: 'VXNlcjoy', currentState: 'AVAILABLE'})
-    // .then(() => this.props.toggleOnline());
   }
 
   _setUserInactive = () => {
-    // this.assignedSubscription && this.assignedSubscription();
-    // this.assignedSubscription = null;
+    this._teardownUserSubscription();
     this.props.submitUserUpdate({id: 'VXNlcjoy', currentState: 'UNAVAILABLE'})
-    // .then(() => this.props.toggleOnline());
   }
 
   _acceptPendingAssignment = () => {
-    console.log(this.props.user);
-
     const { id } = this.props.user.pendingAssignments.edges[0].node;
 
     this.props.submitPendingAssignmentUpdate({ id, status: "ACCEPTED"})
     .then(({data}) => {
-      console.log(data);
       this.props.setRequestId(data.updatePendingAssignment.changedPendingAssignment.request.id)
     });
   }
@@ -190,7 +205,8 @@ class Request extends Component {
   _rejectPendingAssignment = () => {
     const { id } = this.props.user.pendingAssignments.edges[0].node;
 
-    this.props.submitPendingAssignmentUpdate({ id, status: "REJECTED"});
+    this.props.submitPendingAssignmentUpdate({ id, status: "REJECTED"})
+    .then(() => this.props.setRequestId(null));
   }
 
   _confirmArrival = () => {
@@ -220,14 +236,7 @@ class Request extends Component {
   }
 
   componentWillUnmount() {
-    // this.assignedSubscription && this.assignedSubscription();
-    // this.assignedSubscription = null;
-  }
-
-  _setRequestId = () => {
-    this.props.submitPendingAssignmentUpdate({})
-    .then(result => console.log(result));
-    // sets the request id when walker accepts pendingAssignment
+    this._teardownUserSubscription();
   }
 
   _renderButton = () => {
@@ -247,8 +256,6 @@ class Request extends Component {
       currentState,
       requestState,
     } = this.props;
-
-    console.log(requestState);
 
     switch (currentState) {
       case "LOADING":
@@ -340,38 +347,6 @@ class Request extends Component {
     }
 
     return (<View/>);
-    // } else if (dispatched && !arrived) {
-    //   return (<View/>);
-    // } else if (arrived && !pickedUp) {
-    //   return (
-    //     <View style={{flexDirection: 'row'}}>
-    //       <Button
-    //         danger
-    //         block
-    //         onPress={cancelDispatch}
-    //         style={{margin: 16, flex: 1}}>
-    //         <Text>{"Cancel"}</Text>
-    //       </Button>
-    //       <Button
-    //         success
-    //         block
-    //         onPress={confirmPickup}
-    //         style={{margin: 16, flex: 1}}>
-    //         <Text>{"Met Requestor"}</Text>
-    //       </Button>
-    //     </View>
-    //   );
-    // } else if (pickedUp) {
-    //   return (
-    //     <Button
-    //       block
-    //       success
-    //       onPress={confirmComplete}
-    //       style={styles.button}>
-    //       <Text>{"Complete"}</Text>
-    //     </Button>
-    //   );
-    // }
   }
 
   render() {
@@ -453,6 +428,79 @@ const styles = {
   }
 };
 
+const USER_SUBSCRIPTION = gql`
+  subscription($id: ID) {
+    subscribeToUser(filter: {
+      id: { eq: $id },
+      currentState: { in: [AVAILABLE, PENDINGASSIGNED, ASSIGNED] }
+    },
+    mutations: [updateUser]) {
+      value {
+        id
+        name
+        currentState
+        assignments(where: {
+          request: {
+            status: { notIn: [CANCELLED, COMPLETED] }
+          }
+        }) {
+          edges {
+            node {
+              id
+              request {
+                id
+                status
+                source {
+                  latitude
+                  longitude
+                  name
+                }
+                destination {
+                  latitude
+                  longitude
+                  name
+                }
+                requestor {
+                  id
+                  name
+                }
+              }
+            }
+          }
+        }
+        pendingAssignments(where: {
+          status: { eq: PENDING }
+        }) {
+          edges {
+            node {
+              id
+              status
+              request {
+                id
+                status
+                source {
+                  latitude
+                  longitude
+                  name
+                }
+                destination {
+                  latitude
+                  longitude
+                  name
+                }
+                requestor {
+                  id
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`
+
 const ASSIGNED_SUBSCRIPTION = gql`
   subscription($id: ID) {
     subscribeToPendingAssignment(filter: {
@@ -523,6 +571,35 @@ const USER_QUERY = gql`
           }
         }
       }
+      assignments(where: {
+        request: {
+          status: { notIn: [CANCELLED, COMPLETED] }
+        }
+      }) {
+        edges {
+          node {
+            id
+            request {
+              id
+              status
+              source {
+                latitude
+                longitude
+                name
+              }
+              destination {
+                latitude
+                longitude
+                name
+              }
+              requestor {
+                id
+                name
+              }
+            }
+          }
+        }
+      }
     }
   }
 `;
@@ -549,7 +626,22 @@ const withUserData = graphql(
       }
 
       return {
-        ...mappedState
+        ...mappedState,
+        subscribeToUserUpdate: ({ id }) => {
+          return user.subscribeToMore({
+            document: USER_SUBSCRIPTION,
+            variables: { id },
+            updateQuery: (prev, {subscriptionData}) => {
+              if (!subscriptionData.data) {
+                return prev;
+              }
+
+              const nextState = { getUser: subscriptionData.data.subscribeToUser.value };
+
+              return nextState;
+            }
+          })
+        }
       }
     }
   }
@@ -597,8 +689,6 @@ const withRequestData = graphql(
     options: ownProps => ({ variables: { id: ownProps.requestId }}),
     props: ({ownProps, request}) => {
       const mappedState = {};
-
-      console.log('YOU SHOULD BE EXECUTING...');
 
       if (!request.loading && !request.error) {
         const { getRequest: requestData } = request;
